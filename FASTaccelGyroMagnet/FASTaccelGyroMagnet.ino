@@ -38,6 +38,7 @@ unsigned long timestamp;
 const unsigned long period = 1000;  //the value is a number of milliseconds
 char control_val; // control input
 int haptic_control_pin = 8; // haptic_control
+bool debug = false;
 
 void setup(){
   Serial.begin(115200);
@@ -105,6 +106,7 @@ void setup(){
   unsigned int c = Wire.read();
   }
   delay(300);
+  Serial.println("Starting FAST Heel2toe....");
   startMillis = millis();  //initial start time
 }
 
@@ -113,7 +115,8 @@ void loop(){
   int rslt;
   int16_t accelGyro[6]={0}; 
   unsigned int data[7];
-
+  
+  // check for haptic control
   if (Serial.available()){
     control_val = Serial.read();
     Serial.print(">>> received =");Serial.println(control_val); 
@@ -121,9 +124,12 @@ void loop(){
     if (control_val == '1') {analogWrite(haptic_control_pin, 255); delay(10); analogWrite(haptic_control_pin, 175) ; Serial.println("Speed is = 1");}
   }
 
+   // set the timestamp
    currentMillis = millis(); 
-   timestamp = currentMillis-startMillis;
-   Serial.print("T");Serial.print(timestamp); 
+   timestamp = currentMillis-startMillis;  
+   if (debug) {Serial.print("T");}
+   Serial.print(timestamp); 
+   
   //get both accel and gyro data from bmi160
   //parameter accelGyro is the pointer to store the data
   rslt = bmi160.getAccelGyroData(accelGyro);
@@ -131,17 +137,19 @@ void loop(){
     for(i=0;i<6;i++){
       if (i<3){
         //the first three are gyro datas
-        Serial.print(",G");Serial.print(accelGyro[i]*3.14/180.0);
+        if (debug) Serial.print(",G"); else Serial.print(",");
+        Serial.print(accelGyro[i]*3.14/180.0);
       }else{
         //the following three data are accel datas
-        Serial.print(",A");Serial.print(accelGyro[i]/16384.0);
+        if (debug) Serial.print(",A"); else Serial.print(",");
+        Serial.print(accelGyro[i]/16384.0);
       }
     }
     //Serial.println();
   }else{
     Serial.println("err");
   }
-  delay(100);
+  if (debug) delay(100);
   // Start I2C Transmission
 Wire.beginTransmission(Addr);
 // Start single meaurement mode, ZYX enabled
@@ -157,17 +165,17 @@ if(Wire.available() == 1)
 {
 unsigned int c = Wire.read();
 }
-delay(100);
+  if (debug) delay(100);
   // Start I2C Transmission
   Wire.beginTransmission(Addr);
   // Send read measurement command, ZYX enabled
   Wire.write(0x4E);
   // Stop I2C Transmission
   Wire.endTransmission();
-  delay(100);
+   if (debug) delay(100);
   // Request 7 bytes of data
   Wire.requestFrom(Addr, 7);
-  delay(50);
+   if (debug) delay(50);
    
   // Read 7 bytes of data
   // status, xMag msb, xMag lsb, yMag msb, yMag lsb, zMag msb, zMag lsb
@@ -197,16 +205,19 @@ delay(100);
   int zMag = data[5] * 256 + data[6];
    
   // Output data to serial monitor
-    Serial.print(",M");Serial.print(xMag);
-    Serial.print(",M");Serial.print(yMag);
-    Serial.print(",M");Serial.println(zMag);
+   if (debug) Serial.print(",M"); else Serial.print(",");
+   Serial.print(xMag);
+   if (debug) Serial.print(",M"); else Serial.print(",");  
+   Serial.print(yMag);
+   if (debug) Serial.print(",M"); else Serial.print(",");
+   Serial.println(zMag);
   /* Serial.print("Magnetic Field in X-Axis : ");
   Serial.println(xMag);
   Serial.print("Magnetic Field in Y-Axis : ");
   Serial.println(yMag);
   Serial.print("Magnetic Field in Z-Axis : ");
   Serial.println(zMag); */
-  delay(350);
+   if (debug) delay(350); else delay(40);
   if (control_val == '1') {
     analogWrite(haptic_control_pin, 0); 
     control_val = 0;
